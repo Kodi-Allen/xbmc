@@ -77,6 +77,7 @@ using namespace KODI::MESSAGING;
 #define CONTROL_BTNSWITCHMEDIA          11
 #define CONTROL_BTNCANCELJOB            12
 #define CONTROL_BTNVIEW                 13
+#define CONTROL_BTNPLAY                 14
 
 
 #define CONTROL_NUMFILES_LEFT           12
@@ -1043,6 +1044,9 @@ void CGUIWindowFileManager::OnPopupMenu(int list, int item, bool bContextDriven 
   CContextButtons choices;
   if (item >= 0)
   {
+    // Play media files (incl. disc images like .iso) directly with the internal player
+    if (!pItem->IsParentFolder() && (VIDEO::IsVideo(*pItem) || MUSIC::IsAudio(*pItem)))
+      choices.Add(CONTROL_BTNPLAY, 208); // Play
     //The ".." item is not selectable. Take that into account when figuring out if all items are selected
     int notSelectable = CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(CSettings::SETTING_FILELISTS_SHOWPARENTDIRITEMS) ? 1 : 0;
     if (NumSelected(list) <  m_vecItems[list]->Size() - notSelectable)
@@ -1081,6 +1085,14 @@ void CGUIWindowFileManager::OnPopupMenu(int list, int item, bool bContextDriven 
   {
     CServiceBroker::GetFavouritesService().AddOrRemove(*pItem.get(), GetID());
     return;
+  }
+  if (btnid == CONTROL_BTNPLAY)
+  {
+    // File-manager items have no video info tag, so disc images (.iso) are
+    // misdetected as games and would otherwise resolve to RetroPlayer. Force the
+    // internal video player for video items; let other types resolve normally.
+    const std::string player = VIDEO::IsVideo(*pItem) ? "VideoPlayer" : "";
+    OnStart(pItem.get(), player);
   }
   if (btnid == CONTROL_BTNPLAYWITH)
   {
